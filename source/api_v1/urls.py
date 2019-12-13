@@ -11,6 +11,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('login/', obtain_auth_token, name='obtain_auth_token'),
     path('logout/', LogoutView.as_view(), name='delete_auth_token'),
-    path('increase_rating/<int:pk>', IncreaseRatingView.as_view(), name='increase_rating'),
-    path('decrease_rating/<int:pk>', DecreaseRatingView.as_view(), name='decrease_rating')
+    path('increase_rating/<int:pk>/', IncreaseRatingView.as_view(), name='increase_rating'),
+    path('decrease_rating/<int:pk>/', DecreaseRatingView.as_view(), name='decrease_rating')
 ]
