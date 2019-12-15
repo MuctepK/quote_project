@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 
 class QuoteSerializer(serializers.ModelSerializer):
-    created_at = serializers.DateField(read_only=True)
+    created_at = serializers.DateField(read_only=True, format="%Y-%m-%d")
 
     class Meta:
         model = Quote

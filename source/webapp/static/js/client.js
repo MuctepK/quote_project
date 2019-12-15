@@ -7,6 +7,7 @@ function getFullPath(path) {
 }
 
 function makeRequest(path, method, auth=true, data=null) {
+    if (getToken()) auth=true;
     let settings = {
         url: getFullPath(path),
         method: method,
@@ -19,6 +20,7 @@ function makeRequest(path, method, auth=true, data=null) {
     if (auth) {
         settings.headers = {'Authorization': 'Token ' + getToken()};
     }
+    console.log(settings.headers);
     return $.ajax(settings);
 }
 
@@ -41,7 +43,9 @@ function logIn(username, password) {
         console.log('Received token');
         saveToken(data.token);
         formModal.modal('hide');
-        checkAuth()
+        checkAuth();
+        $('#content').empty();
+        getQuotes();
     }).fail(function(response, status, message) {
         console.log('Could not get token');
         console.log(response.responseText);
@@ -53,19 +57,22 @@ function logOut() {
     request.done(function(data, status, response) {
         console.log('Cleaned token');
         removeToken();
-        checkAuth()
+        checkAuth();
+        $('#content').empty();
+        getQuotes();
     }).fail(function(response, status, message) {
         console.log('Could not clean token');
         console.log(response.responseText);
     });
 }
 
-let logInForm, quoteForm, homeLink, enterLink, exitLink, createLink, editLink, deleteLink, formSubmit, formTitle, content, formModal,
-    usernameInput, passwordInput, authorInput, textInput, emailInput, textEditInput, ratingInput, statusInput;
+let logInForm, quoteForm,editForm, homeLink, enterLink, exitLink, createLink, editLink, deleteLink, formSubmit, formTitle, content, formModal,
+    usernameInput, passwordInput, authorInput, textInput, emailInput, textEditInput, ratingInput, statusInput, idInput;
 
 function setUpGlobalVars() {
     logInForm = $('#log_in_form');
     quoteForm = $('#quote_form');
+    editForm  = $('#edit_form');
     homeLink = $('#home_link');
     enterLink = $('#enter_link');
     exitLink = $('#exit_link');
@@ -82,7 +89,9 @@ function setUpGlobalVars() {
     textInput = $('#text_input');
     emailInput = $('#email_input');
     textEditInput = $('#text_edit_input');
-    ratingInput = $('#')
+    ratingInput = $('#rating_input');
+    statusInput = $('#status_input');
+    idInput = $('#id_input');
 }
 
 function setUpAuth() {
@@ -94,6 +103,7 @@ function setUpAuth() {
     enterLink.on('click', function(event) {
         event.preventDefault();
         logInForm.removeClass('d-none');
+        editForm.addClass('d-none');
         quoteForm.addClass('d-none');
         formTitle.text('Войти');
         formSubmit.text('Войти');
@@ -111,27 +121,25 @@ function setUpAuth() {
         event.preventDefault();
         CreateQuote(textInput.val(), authorInput.val(), emailInput.val());
     });
+    editForm.on('submit', function(event){
+        event.preventDefault();
+        updateQuote(idInput.val(), textEditInput.val(), statusInput.val(), ratingInput.val());
+    });
     createLink.on('click', function(event){
         event.preventDefault();
         logInForm.addClass('d-none');
         quoteForm.removeClass('d-none');
+        editForm.addClass('d-none');
         formTitle.text('Создать цитату');
         formSubmit.text('Создать');
         formSubmit.off('click');
         formSubmit.on('click', function(event){
+            event.preventDefault();
             quoteForm.submit();
         })
     });
-    editLink.on('click', function(event){
-       event.preventDefault();
-       quoteForm.removeClass('d-none');
-        formTitle.text('Изменить цитату');
-        formSubmit.text('Создать');
-    });
-    deleteLink.on('click', function (event) {
-        event.preventDefault();
 
-    })
+
 }
 
 function checkAuth() {
@@ -140,14 +148,17 @@ function checkAuth() {
         enterLink.addClass('d-none');
         exitLink.removeClass('d-none');
         createLink.removeClass('d-none');
+
         $('.edit_btn').removeClass('d-none');
         $('.delete_btn').removeClass('d-none');
+
     } else {
         enterLink.removeClass('d-none');
         exitLink.addClass('d-none');
         createLink.addClass('d-none');
         $('.edit_btn').addClass('d-none');
         $('.delete_btn').addClass('d-none');
+
     }
 }
 
@@ -174,6 +185,19 @@ function CreateQuote(text, author, email){
         console.log('Error during creating');
         console.log(response.responseText);
     });
+}
+function updateQuote(id,text, status, rating){
+    const credentials = {text, status, rating};
+    let request = makeRequest('quotes/'+id, 'patch', true, credentials);
+    request.done(function(){
+        console.log("Updated quote");
+        formModal.modal("hide");
+        $('#content').empty();
+        getQuotes();
+    }).fail(function (response) {
+        console.log("Error during updating");
+        console.log(response.responseText);
+    })
 }
 function quoteDelete(id){
     let request = makeRequest('quotes/'+id, 'delete', true);
@@ -205,23 +229,37 @@ function quoteDetail(id){
                     backBtn.remove();
                 })
 }
-function addButtonHandlers(id){
-        $(`.change_rating_${id}`).on('click', function(event) {
+function addButtonHandlers(item){
+        $(`.change_rating_${item.id}`).on('click', function(event) {
                 event.preventDefault();
-                rateChange(id, $(event.target).data("type"));
+                rateChange(item.id, $(event.target).data("type"));
             });
 
-        $(`#delete_link_${id}`).on('click', function(event){
+        $(`#delete_link_${item.id}`).on('click', function(event){
             event.preventDefault();
-            quoteDelete(id);
+            quoteDelete(item.id);
         });
-        $(`#edit_link_${id}`.on('click'), function(event){
+        $(`#edit_link_${item.id}`).on('click', function(event){
             event.preventDefault();
-
-        })
-        $(`#view_detail_${id}`).on('click', function(event){
+            formModal.modal("show");
+            editForm.removeClass('d-none');
+            quoteForm.addClass('d-none');
+            logInForm.addClass('d-none');
+            textEditInput.val(item.text);
+            ratingInput.val(item.rating);
+            statusInput.val(item.status);
+            idInput.val(item.id);
+             formTitle.text('Изменить цитату');
+            formSubmit.text('Изменить');
+            formSubmit.off('click');
+            formSubmit.on('click', function(event){
+                event.preventDefault();
+                editForm.submit();
+                });
+        });
+        $(`#view_detail_${item.id}`).on('click', function(event){
             event.preventDefault();
-            quoteDetail(id);
+            quoteDetail(item.id);
         });
 }
 
@@ -234,6 +272,7 @@ function getQuotes() {
             content.append($(`<div class="card my-4" id="quote_${item.id}">
                 <h3 class="mt-4 text-center">Цитата с номером <a href="" id="view_detail_${item.id}">${item.id}</a></h3>
                 <p class="text-center">${item.text}</p>
+                <p>Дата создания: <b>${item.created_at}</b></p>
                 <h5 class="text-right mr-5" id="rating_${item.id}">Рейтинг цитаты:  ${item.rating}</h5>
                 <div class="row justify-content-end mr-5 mx-0">
                 <p><a href="#" class="btn btn-success mr-2 change_rating_${item.id}" data-type="increase">+</a></p>
@@ -244,7 +283,8 @@ function getQuotes() {
                 <p><a href="" class="btn btn-warning delete_btn" id="delete_link_${item.id}">Удалить</a></p>
                 </div>
             </div>`));
-            addButtonHandlers(item.id);
+            addButtonHandlers(item);
+            checkAuth();
         });
     }).fail(function(response, status, message) {
         console.log('Could not get quotes.');
@@ -257,5 +297,5 @@ $(document).ready(function() {
     setUpGlobalVars();
     setUpAuth();
     getQuotes();
-    checkAuth();
+
 });

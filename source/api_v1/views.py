@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet, ModelViewSet
 
 from api_v1.serializers import QuoteSerializer
-from webapp.models import Quote, STATUS_DEFAULT_CHOICE
+from webapp.models import Quote, STATUS_VERIFIED_CHOICE
 
 
 class LogoutView(APIView):
@@ -22,19 +22,18 @@ class LogoutView(APIView):
 
 class QuoteViewSet(ModelViewSet):
     serializer_class = QuoteSerializer
-    queryset = Quote.objects.all()
-    permission_classes = [IsAuthenticated]
+    queryset = Quote.objects.none()
 
     def get_queryset(self):
-        if self.request.user.is_anonymous:
-            return Quote.objects.filter(status=STATUS_DEFAULT_CHOICE)
-        return Quote.objects.all()
+        print(self.request.user.is_authenticated)
+        if self.request.user.is_authenticated:
+            return Quote.objects.all()
+        return Quote.objects.filter(status=STATUS_VERIFIED_CHOICE)
 
     def get_permissions(self):
-        if self.request.method in SAFE_METHODS:
-            return []
-        else:
-            return super().get_permissions()
+        if self.action not in ['update', 'partial_update', 'destroy']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
 
 class IncreaseRatingView(APIView):

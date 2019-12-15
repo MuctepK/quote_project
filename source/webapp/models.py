@@ -5,6 +5,7 @@ STATUS_CHOICES = [
     ('verified', 'Проверен')
 ]
 STATUS_DEFAULT_CHOICE = 'new'
+STATUS_VERIFIED_CHOICE = "verified"
 
 
 class Quote(models.Model):
